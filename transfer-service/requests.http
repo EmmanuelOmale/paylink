@@ -1,0 +1,107 @@
+@baseUrl = http://localhost:8080/api/v1/transfers
+@replayKey = 3f6c1a52-8d4e-4b7a-9c21-5e0f7d9a1b34
+
+### 201 (send twice to see the replay)
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{replayKey}}
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W2002", "amount": "25000.00", "currency": "NGN", "remarks": "Rent share" }
+
+### 422 IDEMPOTENCY_KEY_REUSED
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{replayKey}}
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W2002", "amount": "30000.00", "currency": "NGN", "remarks": "Rent share" }
+
+### 409 REQUEST_IN_PROGRESS (send twice quickly)
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: 9a7d4c1e-2b3f-4e5a-8c6d-7e8f9a0b1c2d
+
+{ "sourceWalletId": "W2002", "destinationWalletId": "W1001", "amount": "100.00", "currency": "NGN" }
+
+### 400 no key
+POST {{baseUrl}}
+Content-Type: application/json
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W2002", "amount": "100.00", "currency": "NGN" }
+
+### 400 bad key
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: not-a-uuid
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W2002", "amount": "100.00", "currency": "NGN" }
+
+### 400 bad amount
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W2002", "amount": "1.234", "currency": "NGN" }
+
+### 400 bad JSON
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W1001", "amount":
+
+### 400 suspended wallet
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W4004", "destinationWalletId": "W2002", "amount": "100.00", "currency": "NGN" }
+
+### 400 currency mismatch
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W5005", "amount": "100.00", "currency": "NGN" }
+
+### 404 WALLET_NOT_FOUND
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W1001", "destinationWalletId": "W9999", "amount": "100.00", "currency": "NGN" }
+
+### 422 INSUFFICIENT_FUNDS
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W2002", "destinationWalletId": "W1001", "amount": "900000.00", "currency": "NGN" }
+
+### 422 RISK_DECLINED
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W3003", "destinationWalletId": "W1001", "amount": "600000.00", "currency": "NGN" }
+
+### 429 RATE_LIMITED (send 6 times)
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W2002", "destinationWalletId": "W3003", "amount": "1.00", "currency": "NGN" }
+
+### 503 RISK_UNAVAILABLE (random, about 1 in 125)
+POST {{baseUrl}}
+Content-Type: application/json
+Idempotency-Key: {{$guid}}
+
+{ "sourceWalletId": "W3003", "destinationWalletId": "W2002", "amount": "1.00", "currency": "NGN" }
+
+### 500 INTERNAL_ERROR: no request triggers it
+
+### 200
+GET {{baseUrl}}/631701000000
+
+### 404 TRANSFER_NOT_FOUND
+GET {{baseUrl}}/000000000000
